@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    }
+  ],
+  "env": {
+    "JWT_SECRET": "project-scope-secret-key-2024-change-in-production",
+    "JWT_EXPIRY": "24h",
+    "CORS_ORIGIN": "https://tuusuario.github.io"
+  }
+}
