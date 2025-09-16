@@ -75,6 +75,48 @@ app.post('/api/init-db', async (req, res) => {
     }
 });
 
+// Reset database endpoint (drops and recreates everything)
+app.post('/api/reset-db', async (req, res) => {
+    try {
+        // Drop all tables in correct order (respecting foreign keys)
+        const dropQueries = [
+            'DROP TABLE IF EXISTS minutes CASCADE;',
+            'DROP TABLE IF EXISTS risks CASCADE;',
+            'DROP TABLE IF EXISTS sprint_tasks CASCADE;',
+            'DROP TABLE IF EXISTS kanban_columns CASCADE;',
+            'DROP TABLE IF EXISTS tasks CASCADE;',
+            'DROP TABLE IF EXISTS sprints CASCADE;',
+            'DROP TABLE IF EXISTS projects CASCADE;',
+            'DROP TABLE IF EXISTS users CASCADE;',
+            'DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;'
+        ];
+
+        for (const query of dropQueries) {
+            await pool.query(query);
+        }
+
+        // Read and execute the schema
+        const fs = require('fs');
+        const path = require('path');
+        const schemaPath = path.join(__dirname, '../database-schema.sql');
+        const schema = fs.readFileSync(schemaPath, 'utf8');
+        
+        await pool.query(schema);
+        
+        res.json({ 
+            success: true, 
+            message: 'Database reset and initialized successfully' 
+        });
+    } catch (error) {
+        console.error('Database reset error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Database reset failed',
+            message: error.message 
+        });
+    }
+});
+
 // Rutas de autenticación
 app.post('/api/auth/login', async (req, res) => {
     try {
