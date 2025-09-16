@@ -7,7 +7,7 @@ const app = express();
 
 // Configuración de CORS
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'https://tuusuario.github.io', // Cambiar por tu GitHub Pages URL
+    origin: process.env.CORS_ORIGIN || 'https://lorencha0209.github.io', // Tu GitHub Pages URL real
     credentials: true
 }));
 
