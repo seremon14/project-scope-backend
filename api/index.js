@@ -48,6 +48,33 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Initialize database endpoint
+app.post('/api/init-db', async (req, res) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Read the SQL schema file
+        const schemaPath = path.join(__dirname, '../database-schema.sql');
+        const schema = fs.readFileSync(schemaPath, 'utf8');
+        
+        // Execute the schema
+        await pool.query(schema);
+        
+        res.json({ 
+            success: true, 
+            message: 'Database initialized successfully' 
+        });
+    } catch (error) {
+        console.error('Database initialization error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Database initialization failed',
+            message: error.message 
+        });
+    }
+});
+
 // Rutas de autenticación
 app.post('/api/auth/login', async (req, res) => {
     try {
