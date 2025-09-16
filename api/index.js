@@ -230,16 +230,16 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
 
         // Crear columnas por defecto
         const defaultColumns = [
-            [id + '_todo', id, 'Por Hacer', 0, true],
-            [id + '_progress', id, 'En Progreso', 1, true],
-            [id + '_blocked', id, 'Impedimento', 2, true],
-            [id + '_done', id, 'Terminado', 3, true]
+            [id, 'Por Hacer', 0, true],
+            [id, 'En Progreso', 1, true],
+            [id, 'Impedimento', 2, true],
+            [id, 'Terminado', 3, true]
         ];
 
-        for (const [columnId, projectId, columnName, orderIndex, isDefault] of defaultColumns) {
+        for (const [projectId, columnName, orderIndex, isDefault] of defaultColumns) {
             await pool.query(
-                'INSERT INTO kanban_columns (id, project_id, name, order_index, is_default) VALUES ($1, $2, $3, $4, $5)',
-                [columnId, projectId, columnName, orderIndex, isDefault]
+                'INSERT INTO kanban_columns (project_id, name, order_index, is_default) VALUES ($1, $2, $3, $4)',
+                [projectId, columnName, orderIndex, isDefault]
             );
         }
 
@@ -307,6 +307,238 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
             error: 'Failed to delete project',
             details: error.message
         });
+    }
+});
+
+// Rutas de tareas
+app.get('/api/tasks', authenticateToken, async (req, res) => {
+    try {
+        const { project_id } = req.query;
+        let query = 'SELECT * FROM tasks';
+        let params = [];
+        
+        if (project_id) {
+            query += ' WHERE project_id = $1';
+            params.push(project_id);
+        }
+        
+        query += ' ORDER BY created_at DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching tasks:', error);
+        res.status(500).json({
+            error: 'Failed to fetch tasks',
+            details: error.message
+        });
+    }
+});
+
+app.post('/api/tasks', authenticateToken, async (req, res) => {
+    try {
+        const { id, project_id, title, description, status, priority, responsible, start_date, end_date, comments } = req.body;
+        
+        if (!id || !project_id || !title) {
+            return res.status(400).json({
+                error: 'Task ID, project ID and title are required'
+            });
+        }
+
+        await pool.query(
+            'INSERT INTO tasks (id, project_id, title, description, status, priority, responsible, start_date, end_date, comments) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+            [id, project_id, title, description || '', status || 'todo', priority || 'medium', responsible || '', start_date || null, end_date || null, comments || '']
+        );
+        
+        res.json({
+            message: 'Task created successfully',
+            id: id
+        });
+        
+    } catch (error) {
+        if (error.code === '23505') { // Duplicate key
+            res.status(409).json({ error: 'Task with this ID already exists' });
+        } else {
+            console.error('Error creating task:', error);
+            res.status(500).json({
+                error: 'Failed to create task',
+                details: error.message
+            });
+        }
+    }
+});
+
+// Rutas de sprints
+app.get('/api/sprints', authenticateToken, async (req, res) => {
+    try {
+        const { project_id } = req.query;
+        let query = 'SELECT * FROM sprints';
+        let params = [];
+        
+        if (project_id) {
+            query += ' WHERE project_id = $1';
+            params.push(project_id);
+        }
+        
+        query += ' ORDER BY created_at DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching sprints:', error);
+        res.status(500).json({
+            error: 'Failed to fetch sprints',
+            details: error.message
+        });
+    }
+});
+
+app.post('/api/sprints', authenticateToken, async (req, res) => {
+    try {
+        const { id, project_id, name, start_date, end_date, status } = req.body;
+        
+        if (!id || !project_id || !name || !start_date || !end_date) {
+            return res.status(400).json({
+                error: 'Sprint ID, project ID, name, start date and end date are required'
+            });
+        }
+
+        await pool.query(
+            'INSERT INTO sprints (id, project_id, name, start_date, end_date, status) VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, project_id, name, start_date, end_date, status || 'planning']
+        );
+        
+        res.json({
+            message: 'Sprint created successfully',
+            id: id
+        });
+        
+    } catch (error) {
+        if (error.code === '23505') { // Duplicate key
+            res.status(409).json({ error: 'Sprint with this ID already exists' });
+        } else {
+            console.error('Error creating sprint:', error);
+            res.status(500).json({
+                error: 'Failed to create sprint',
+                details: error.message
+            });
+        }
+    }
+});
+
+// Rutas de riesgos
+app.get('/api/risks', authenticateToken, async (req, res) => {
+    try {
+        const { project_id } = req.query;
+        let query = 'SELECT * FROM risks';
+        let params = [];
+        
+        if (project_id) {
+            query += ' WHERE project_id = $1';
+            params.push(project_id);
+        }
+        
+        query += ' ORDER BY created_at DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching risks:', error);
+        res.status(500).json({
+            error: 'Failed to fetch risks',
+            details: error.message
+        });
+    }
+});
+
+app.post('/api/risks', authenticateToken, async (req, res) => {
+    try {
+        const { id, project_id, name, description, impact, probability, mitigation_plan, strategy, status } = req.body;
+        
+        if (!id || !project_id || !name) {
+            return res.status(400).json({
+                error: 'Risk ID, project ID and name are required'
+            });
+        }
+
+        await pool.query(
+            'INSERT INTO risks (id, project_id, name, description, impact, probability, mitigation_plan, strategy, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+            [id, project_id, name, description || '', impact || 1, probability || 1, mitigation_plan || '', strategy || 'accept', status || 'identified']
+        );
+        
+        res.json({
+            message: 'Risk created successfully',
+            id: id
+        });
+        
+    } catch (error) {
+        if (error.code === '23505') { // Duplicate key
+            res.status(409).json({ error: 'Risk with this ID already exists' });
+        } else {
+            console.error('Error creating risk:', error);
+            res.status(500).json({
+                error: 'Failed to create risk',
+                details: error.message
+            });
+        }
+    }
+});
+
+// Rutas de actas
+app.get('/api/minutes', authenticateToken, async (req, res) => {
+    try {
+        const { project_id } = req.query;
+        let query = 'SELECT * FROM minutes';
+        let params = [];
+        
+        if (project_id) {
+            query += ' WHERE project_id = $1';
+            params.push(project_id);
+        }
+        
+        query += ' ORDER BY created_at DESC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching minutes:', error);
+        res.status(500).json({
+            error: 'Failed to fetch minutes',
+            details: error.message
+        });
+    }
+});
+
+app.post('/api/minutes', authenticateToken, async (req, res) => {
+    try {
+        const { id, project_id, title, content, meeting_date } = req.body;
+        
+        if (!id || !project_id || !title || !meeting_date) {
+            return res.status(400).json({
+                error: 'Minutes ID, project ID, title and meeting date are required'
+            });
+        }
+
+        await pool.query(
+            'INSERT INTO minutes (id, project_id, title, content, meeting_date) VALUES ($1, $2, $3, $4, $5)',
+            [id, project_id, title, content || '', meeting_date]
+        );
+        
+        res.json({
+            message: 'Minutes created successfully',
+            id: id
+        });
+        
+    } catch (error) {
+        if (error.code === '23505') { // Duplicate key
+            res.status(409).json({ error: 'Minutes with this ID already exists' });
+        } else {
+            console.error('Error creating minutes:', error);
+            res.status(500).json({
+                error: 'Failed to create minutes',
+                details: error.message
+            });
+        }
     }
 });
 

@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS risks (
 
 -- Minutes table
 CREATE TABLE IF NOT EXISTS minutes (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     project_id VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     content TEXT,
