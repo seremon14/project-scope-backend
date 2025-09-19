@@ -356,18 +356,33 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
 app.get('/api/tasks', authenticateToken, async (req, res) => {
     try {
         const { project_id } = req.query;
-        let query = 'SELECT * FROM tasks';
+        let query = `
+            SELECT t.*, 
+                   COALESCE(
+                       ARRAY_AGG(st.sprint_id) FILTER (WHERE st.sprint_id IS NOT NULL),
+                       ARRAY[]::text[]
+                   ) as sprint_ids
+            FROM tasks t
+            LEFT JOIN sprint_tasks st ON t.id = st.task_id
+        `;
         let params = [];
         
         if (project_id) {
-            query += ' WHERE project_id = $1';
+            query += ' WHERE t.project_id = $1';
             params.push(project_id);
         }
         
-        query += ' ORDER BY created_at DESC';
+        query += ' GROUP BY t.id ORDER BY t.created_at DESC';
         
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        
+        // Transform sprint_ids array to sprintIds for frontend compatibility
+        const tasks = result.rows.map(task => ({
+            ...task,
+            sprintIds: task.sprint_ids || []
+        }));
+        
+        res.json(tasks);
     } catch (error) {
         console.error('Error fetching tasks:', error);
         res.status(500).json({
@@ -456,18 +471,33 @@ app.post('/api/tasks/:taskId/sprint', authenticateToken, async (req, res) => {
 app.get('/api/sprints', authenticateToken, async (req, res) => {
     try {
         const { project_id } = req.query;
-        let query = 'SELECT * FROM sprints';
+        let query = `
+            SELECT s.*, 
+                   COALESCE(
+                       ARRAY_AGG(st.task_id) FILTER (WHERE st.task_id IS NOT NULL),
+                       ARRAY[]::text[]
+                   ) as task_ids
+            FROM sprints s
+            LEFT JOIN sprint_tasks st ON s.id = st.sprint_id
+        `;
         let params = [];
         
         if (project_id) {
-            query += ' WHERE project_id = $1';
+            query += ' WHERE s.project_id = $1';
             params.push(project_id);
         }
         
-        query += ' ORDER BY created_at DESC';
+        query += ' GROUP BY s.id ORDER BY s.created_at DESC';
         
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        
+        // Transform task_ids array to taskIds for frontend compatibility
+        const sprints = result.rows.map(sprint => ({
+            ...sprint,
+            taskIds: sprint.task_ids || []
+        }));
+        
+        res.json(sprints);
     } catch (error) {
         console.error('Error fetching sprints:', error);
         res.status(500).json({
