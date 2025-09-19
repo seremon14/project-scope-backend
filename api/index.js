@@ -584,6 +584,90 @@ app.post('/api/minutes', authenticateToken, async (req, res) => {
     }
 });
 
+// Generate next ID endpoint
+app.get('/api/generate-id/:prefix', authenticateToken, async (req, res) => {
+    try {
+        const { prefix } = req.params;
+        const { project_id } = req.query;
+        
+        let tableName;
+        let columnName = 'project_id';
+        
+        switch (prefix) {
+            case 'P':
+                tableName = 'projects';
+                columnName = null; // Projects don't have project_id
+                break;
+            case 'T':
+                tableName = 'tasks';
+                break;
+            case 'S':
+                tableName = 'sprints';
+                break;
+            case 'R':
+                tableName = 'risks';
+                break;
+            case 'M':
+                tableName = 'minutes';
+                break;
+            default:
+                return res.status(400).json({ error: 'Invalid prefix' });
+        }
+        
+        let query = `SELECT id FROM ${tableName}`;
+        let params = [];
+        
+        if (columnName && project_id) {
+            query += ` WHERE ${columnName} = $1`;
+            params.push(project_id);
+        }
+        
+        const result = await pool.query(query, params);
+        
+        // Find the highest number for this prefix
+        const maxNumber = result.rows.reduce((max, row) => {
+            const match = row.id.match(new RegExp(`^${prefix}(\\d+)$`));
+            return match ? Math.max(max, parseInt(match[1])) : max;
+        }, 0);
+        
+        const nextId = `${prefix}${maxNumber + 1}`;
+        
+        res.json({ id: nextId });
+        
+    } catch (error) {
+        console.error('Error generating ID:', error);
+        res.status(500).json({
+            error: 'Failed to generate ID',
+            details: error.message
+        });
+    }
+});
+
+// Rutas de columnas
+app.get('/api/columns', authenticateToken, async (req, res) => {
+    try {
+        const { project_id } = req.query;
+        let query = 'SELECT * FROM kanban_columns';
+        let params = [];
+        
+        if (project_id) {
+            query += ' WHERE project_id = $1';
+            params.push(project_id);
+        }
+        
+        query += ' ORDER BY order_index ASC';
+        
+        const result = await pool.query(query, params);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching columns:', error);
+        res.status(500).json({
+            error: 'Failed to fetch columns',
+            details: error.message
+        });
+    }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
