@@ -410,6 +410,48 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
     }
 });
 
+// Add task to sprint endpoint
+app.post('/api/tasks/:taskId/sprint', authenticateToken, async (req, res) => {
+    try {
+        const { taskId } = req.params;
+        const { sprint_id } = req.body;
+        
+        if (!sprint_id) {
+            return res.status(400).json({
+                error: 'Sprint ID is required'
+            });
+        }
+
+        // Verify that both task and sprint exist
+        const taskResult = await pool.query('SELECT * FROM tasks WHERE id = $1', [taskId]);
+        if (taskResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const sprintResult = await pool.query('SELECT * FROM sprints WHERE id = $1', [sprint_id]);
+        if (sprintResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Sprint not found' });
+        }
+
+        // Add task to sprint (using sprint_tasks table)
+        await pool.query(
+            'INSERT INTO sprint_tasks (sprint_id, task_id) VALUES ($1, $2) ON CONFLICT (sprint_id, task_id) DO NOTHING',
+            [sprint_id, taskId]
+        );
+        
+        res.json({
+            message: 'Task added to sprint successfully'
+        });
+        
+    } catch (error) {
+        console.error('Error adding task to sprint:', error);
+        res.status(500).json({
+            error: 'Failed to add task to sprint',
+            details: error.message
+        });
+    }
+});
+
 // Rutas de sprints
 app.get('/api/sprints', authenticateToken, async (req, res) => {
     try {
