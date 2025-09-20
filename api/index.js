@@ -425,6 +425,59 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
     }
 });
 
+// Update task endpoint
+app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+        
+        // Build dynamic update query
+        const updateFields = [];
+        const values = [];
+        let paramCount = 1;
+        
+        // Allowed fields to update
+        const allowedFields = ['title', 'description', 'status', 'priority', 'responsible', 'start_date', 'end_date', 'comments'];
+        
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key)) {
+                updateFields.push(`${key} = $${paramCount}`);
+                values.push(value);
+                paramCount++;
+            }
+        }
+        
+        if (updateFields.length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+        
+        // Add updated_at timestamp
+        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+        
+        values.push(id);
+        
+        const query = `UPDATE tasks SET ${updateFields.join(', ')} WHERE id = $${paramCount}`;
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+        
+        res.json({
+            message: 'Task updated successfully',
+            id: id
+        });
+        
+    } catch (error) {
+        console.error('Error updating task:', error);
+        res.status(500).json({
+            error: 'Failed to update task',
+            details: error.message
+        });
+    }
+});
+
 // Add task to sprint endpoint
 app.post('/api/tasks/:taskId/sprint', authenticateToken, async (req, res) => {
     try {
