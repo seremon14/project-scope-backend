@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS sprint_tasks (
 
 -- Kanban columns table
 CREATE TABLE IF NOT EXISTS kanban_columns (
-    id SERIAL PRIMARY KEY,
+    id VARCHAR(50) PRIMARY KEY,
     project_id VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL,
     order_index INTEGER DEFAULT 0,
