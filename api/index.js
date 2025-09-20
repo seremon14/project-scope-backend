@@ -709,6 +709,56 @@ app.post('/api/minutes', authenticateToken, async (req, res) => {
     }
 });
 
+// Update minutes endpoint
+app.put('/api/minutes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, content, meeting_date } = req.body;
+        
+        const updateFields = [];
+        const values = [];
+        let paramCount = 1;
+        
+        if (title !== undefined) {
+            updateFields.push(`title = $${paramCount}`);
+            values.push(title);
+            paramCount++;
+        }
+        if (content !== undefined) {
+            updateFields.push(`content = $${paramCount}`);
+            values.push(content);
+            paramCount++;
+        }
+        if (meeting_date !== undefined) {
+            updateFields.push(`meeting_date = $${paramCount}`);
+            values.push(meeting_date);
+            paramCount++;
+        }
+        
+        if (updateFields.length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+        
+        updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+        values.push(id);
+        
+        const query = `UPDATE minutes SET ${updateFields.join(', ')} WHERE id = $${paramCount}`;
+        const result = await pool.query(query, values);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Minutes not found' });
+        }
+        
+        res.json({ message: 'Minutes updated successfully', id: id });
+    } catch (error) {
+        console.error('Error updating minutes:', error);
+        res.status(500).json({ 
+            error: 'Failed to update minutes', 
+            details: error.message 
+        });
+    }
+});
+
 // Generate next ID endpoint
 app.get('/api/generate-id/:prefix', authenticateToken, async (req, res) => {
     try {
