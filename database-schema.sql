@@ -97,8 +97,8 @@ CREATE TABLE IF NOT EXISTS risks (
         ELSE 4
     END) STORED,
     mitigation_plan TEXT,
-    strategy VARCHAR(50) CHECK (strategy IN ('avoid', 'mitigate', 'transfer', 'accept')),
-    status VARCHAR(20) DEFAULT 'identified' CHECK (status IN ('identified', 'monitoring', 'resolved', 'closed')),
+    strategy VARCHAR(50) CHECK (strategy IN ('avoid', 'mitigate', 'transfer', 'accept', 'Aceptar', 'Mitigar', 'Transferir', 'Evitar')),
+    status VARCHAR(20) DEFAULT 'identified' CHECK (status IN ('identified', 'monitoring', 'resolved', 'closed', 'Activo', 'Mitigado', 'Cerrado')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
